@@ -1592,6 +1592,7 @@ fn genInst(self: *Self, inst: Air.Inst.Index) !WValue {
         .call_always_tail => self.airCall(inst, .always_tail),
         .call_never_tail => self.airCall(inst, .never_tail),
         .call_never_inline => self.airCall(inst, .never_inline),
+        .call_async => self.airCall(inst, .async_kw),
 
         .is_err => self.airIsErr(inst, .i32_ne),
         .is_non_err => self.airIsErr(inst, .i32_eq),
@@ -1818,6 +1819,7 @@ fn airRetLoad(self: *Self, inst: Air.Inst.Index) InnerError!WValue {
 
 fn airCall(self: *Self, inst: Air.Inst.Index, modifier: std.builtin.CallOptions.Modifier) InnerError!WValue {
     if (modifier == .always_tail) return self.fail("TODO implement tail calls for wasm", .{});
+    if (modifier == .async_kw) return self.fail("TODO implement async calls for wasm", .{});
     const pl_op = self.air.instructions.items(.data)[inst].pl_op;
     const extra = self.air.extraData(Air.Call, pl_op.payload);
     const args = self.air.extra[extra.end..][0..extra.data.args_len];
