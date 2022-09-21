@@ -1593,6 +1593,7 @@ fn genInst(self: *Self, inst: Air.Inst.Index) !WValue {
         .call_never_tail => self.airCall(inst, .never_tail),
         .call_never_inline => self.airCall(inst, .never_inline),
         .call_async => self.airCall(inst, .async_kw),
+        .call_async_alloc => self.airCall(inst, .async_kw),
 
         .is_err => self.airIsErr(inst, .i32_ne),
         .is_non_err => self.airIsErr(inst, .i32_eq),
