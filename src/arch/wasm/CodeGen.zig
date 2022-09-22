@@ -1595,6 +1595,9 @@ fn genInst(self: *Self, inst: Air.Inst.Index) !WValue {
         .call_async => self.airCall(inst, .async_kw),
         .call_async_alloc => self.airCall(inst, .async_kw),
 
+        .suspend_begin => self.airSuspendBegin(inst),
+        .suspend_end => self.airSuspendEnd(inst),
+
         .is_err => self.airIsErr(inst, .i32_ne),
         .is_non_err => self.airIsErr(inst, .i32_eq),
 
@@ -1816,6 +1819,16 @@ fn airRetLoad(self: *Self, inst: Air.Inst.Index) InnerError!WValue {
     try self.restoreStackPointer();
     try self.addTag(.@"return");
     return .none;
+}
+
+fn airSuspendBegin(self: *Self, inst: Air.Inst.Index) InnerError!WValue {
+    _ = inst;
+    return self.fail("TODO implement suspend_begin for wasm", .{});
+}
+
+fn airSuspendEnd(self: *Self, inst: Air.Inst.Index) InnerError!WValue {
+    _ = inst;
+    return self.fail("TODO implement suspend_end for wasm", .{});
 }
 
 fn airCall(self: *Self, inst: Air.Inst.Index, modifier: std.builtin.CallOptions.Modifier) InnerError!WValue {

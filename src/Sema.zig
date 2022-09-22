@@ -599,11 +599,7 @@ fn resolveBody(
     return try sema.resolveInst(break_data.operand);
 }
 
-pub fn analyzeBody(
-    sema: *Sema,
-    block: *Block,
-    body: []const Zir.Inst.Index,
-) !void {
+pub fn analyzeBody(sema: *Sema, block: *Block, body: []const Zir.Inst.Index) !void {
     _ = sema.analyzeBodyInner(block, body) catch |err| switch (err) {
         error.ComptimeBreak => unreachable, // unexpected comptime control flow
         else => |e| return e,
@@ -715,7 +711,6 @@ fn analyzeBodyInner(
             .bit_not                      => try sema.zirBitNot(block, inst),
             .bit_or                       => try sema.zirBitwise(block, inst, .bit_or),
             .bitcast                      => try sema.zirBitcast(block, inst),
-            .suspend_block                => try sema.zirSuspendBlock(block, inst),
             .bool_not                     => try sema.zirBoolNot(block, inst),
             .bool_br_and                  => try sema.zirBoolBr(block, inst, false),
             .bool_br_or                   => try sema.zirBoolBr(block, inst, true),
@@ -985,6 +980,11 @@ fn analyzeBodyInner(
             // continue the loop.
             // We also know that they cannot be referenced later, so we avoid
             // putting them into the map.
+            .suspend_block => {
+                try sema.zirSuspendBlock(block, inst);
+                i += 1;
+                continue;
+            },
             .dbg_stmt => {
                 try sema.zirDbgStmt(block, inst);
                 i += 1;
@@ -4861,10 +4861,16 @@ fn zirCImport(sema: *Sema, parent_block: *Block, inst: Zir.Inst.Index) CompileEr
     return sema.addConstant(file_root_decl.ty, file_root_decl.val);
 }
 
-fn zirSuspendBlock(sema: *Sema, parent_block: *Block, inst: Zir.Inst.Index) CompileError!Air.Inst.Ref {
-    const inst_data = sema.code.instructions.items(.data)[inst].pl_node;
-    const src = inst_data.src();
-    return sema.failWithUseOfAsync(parent_block, src);
+fn zirSuspendBlock(sema: *Sema, parent_block: *Block, inst: Zir.Inst.Index) CompileError!void {
+    const pl_node = sema.code.instructions.items(.data)[inst].pl_node;
+    const src = pl_node.src();
+    const extra = sema.code.extraData(Zir.Inst.Block, pl_node.payload_index);
+    const body = sema.code.extra[extra.end..][0..extra.data.body_len];
+    _ = src;
+    sema.owner_func.?.async_status = .yes_async;
+    _ = try parent_block.addNoOp(.suspend_begin);
+    _ = try sema.resolveBody(parent_block, body, inst);
+    _ = try parent_block.addNoOp(.suspend_end);
 }
 
 fn zirBlock(sema: *Sema, parent_block: *Block, inst: Zir.Inst.Index) CompileError!Air.Inst.Ref {
